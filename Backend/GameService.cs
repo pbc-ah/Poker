@@ -208,7 +208,7 @@ public class GameService
 			Player = player,
 			OtherPlayers = game.Players
 				.Where(p => p.Id != player.Id)
-				.Select(p => PublicPlayer.Create(p, game.Status))
+				.Select(p => PublicPlayer.Create(p, game.Status, game.Players.Count, game.Players.Where(_=>_.IsFolded).Count()))
 		};
 	}
 

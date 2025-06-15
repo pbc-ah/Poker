@@ -6,7 +6,7 @@
 					<label>Rundi ka perfundu, duke prit lojtart per rund tjeter...</label>
 					<div style="display: flex; gap: 1em">
 						<button @click="showingResults = true" v-if="!showingResults">Shih tavolinen</button>
-						<button @click="playerIsReady" v-if="!getGameRoom?.player?.isReady">I'm ready</button>
+						<button @click="triggerReady" v-if="!getGameRoom?.player?.isReady">I'm ready</button>
 					</div>
 					<div class="cards" v-if="showingResults">
 						<img v-for="card in getGameRoom.communityCards" :src="'/cards/' + card + '.svg'" />
@@ -16,7 +16,7 @@
 			<template v-else-if="getGameRoom.status === 'waiting'">
 				<div class="column">
 					<label>Rundi ska fillu, duke prit lojtart...</label>
-					<button @click="playerIsReady" v-if="!getGameRoom?.player?.isReady">I'm ready</button>
+					<button @click="triggerReady" v-if="!getGameRoom?.player?.isReady">I'm ready</button>
 				</div>
 			</template>
 			<template v-else>
@@ -67,7 +67,7 @@
 				</label>
 				<label v-else-if="getGameRoom.currentTurn === player.id">Status: renin</label>
 				<label v-else>Status: nloj</label>
-				<div v-if="showingResults && !player.isFolded">
+				<div v-if="showingResults && !player.isFolded && permitShowingCards">
 					<label>Letrat:</label>
 					<div style="display: flex; gap: 1em">
 						<img v-for="card in player.hand" :src="'/cards/' + card + '.svg'" style="height: 80px" />
@@ -192,6 +192,10 @@
 					type: action
 				});
 			},
+			async triggerReady() {
+				await this.playerIsReady();
+				this.showingResults = false;
+			},
 			async commitRaise() {
 				if (!this.amount)
 					return;
@@ -209,6 +213,16 @@
 		mounted() {
 			setInterval(async () => await this.getState(), 750);
 		},
-		computed: mapGetters(['getGameRoom'])
+		computed: {
+			...mapGetters(['getGameRoom']),
+
+			permitShowingCards() {
+				const allPlayers = [getGameRoom.player, ...getGameRoom.otherPlayers];
+
+				const foldedPlayers = allPlayers.filter(_ => _.isFolded);
+
+				return allPlayers.length - 1 !== foldedPlayers.length;
+			}
+		}
 	}
 </script>
