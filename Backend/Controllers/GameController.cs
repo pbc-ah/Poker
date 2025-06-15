@@ -24,11 +24,7 @@ public class GameController(GameService gameService) : ControllerBase
 		if (!success)
 			return BadRequest("Cannot join game.");
 
-		return Ok(new
-		{
-			player.Id,
-			player.SecretId
-		});
+		return Ok(new PlayerCredentials(player));
 	}
 
 	[HttpGet("{gameId}/{playerId}/state")]
