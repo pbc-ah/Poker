@@ -1,10 +1,13 @@
+using System.Text.Json.Serialization;
+
 namespace Backend.Models;
 
 public class Game(int anteAmount)
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public int AnteAmount { get; } = anteAmount;
-    public DeckHelper Deck { get; set; }
+    [JsonIgnore]
+    internal DeckHelper Deck { get; set; }
 	public List<Player> Players { get; set; } = [];
     public List<string> CommunityCards { get; set; } = [];
     public string Status { get; set; } = "waiting";
