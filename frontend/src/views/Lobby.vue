@@ -1,6 +1,6 @@
 <template>
     <div>Rooms</div>
-    <div v-if="getGameRooms" v-for="game in getGameRooms" key="game">
+    <div v-if="getGameRooms?.length" v-for="game in getGameRooms" key="game">
         {{game}}
         <button v-if="!tempGameId && game.status === 'waiting'" @click="tempGameId = game.id">Join game</button>
         <div v-else-if="tempGameId === game.id">
@@ -35,7 +35,7 @@
             }
         },
         methods: {
-            ...mapActions(['viewRooms', 'createGame', 'joinGame']),
+			...mapActions(['viewRooms', 'createGame', 'joinGame', 'getState']),
 
 			...mapMutations(['updateGameData']),
 
@@ -59,7 +59,7 @@
                     }
                 });
 
-                await this.viewRooms();
+				await this.getState();
 
                 this.$router.push(`/game`);
             }

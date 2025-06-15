@@ -47,10 +47,13 @@ public class DeckHelper
 	{
 		List<char> suits = ['C', 'D', 'H', 'S'],
 			ranks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'];
+
 		List<string> deck = [];
+
 		foreach (var s in suits)
 			foreach (var r in ranks)
 				deck.Add($"{s}{r}");
+
 		return deck;
 	}
 }
