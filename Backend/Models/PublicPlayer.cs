@@ -12,7 +12,7 @@ public class PublicPlayer
 			Balance = player.Balance,
 			IsFolded = player.IsFolded,
 			IsReady = player.IsReady,
-			Hand = status == "waiting" && player.Hand?.Count > 0 && totalPlayers - 1 != foldedPlayers ? player.Hand : null
+			Hand = status == "waiting" && !player.IsFolded && player.Hand?.Count > 0 && totalPlayers - 1 != foldedPlayers ? player.Hand : null
 		};
 
 	public string Id { get; init; }

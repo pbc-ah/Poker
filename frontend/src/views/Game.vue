@@ -67,7 +67,7 @@
 				</label>
 				<label v-else-if="getGameRoom.currentTurn === player.id">Status: renin</label>
 				<label v-else>Status: nloj</label>
-				<div v-if="showingResults && !player.isFolded && permitShowingCards">
+				<div v-if="showingResults && player.hand">
 					<label>Letrat:</label>
 					<div style="display: flex; gap: 1em">
 						<img v-for="card in player.hand" :src="'/cards/' + card + '.svg'" style="height: 80px" />
@@ -213,16 +213,6 @@
 		mounted() {
 			setInterval(async () => await this.getState(), 750);
 		},
-		computed: {
-			...mapGetters(['getGameRoom']),
-
-			permitShowingCards() {
-				const allPlayers = [getGameRoom.player, ...getGameRoom.otherPlayers];
-
-				const foldedPlayers = allPlayers.filter(_ => _.isFolded);
-
-				return allPlayers.length - 1 !== foldedPlayers.length;
-			}
-		}
+		computed: mapGetters(['getGameRoom'])
 	}
 </script>
