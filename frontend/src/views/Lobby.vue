@@ -1,74 +1,109 @@
 <template>
-    <div>Rooms</div>
-    <div v-if="getGameRooms?.length" v-for="game in getGameRooms" key="game">
-        {{game}}
-        <button v-if="!tempGameId && game.status === 'waiting'" @click="tempGameId = game.id">Join game</button>
-        <div v-else-if="tempGameId === game.id">
-            <label>Name</label>
-            <input v-model="name" />
-            <label>Balance</label>
-            <input v-model="balance" />
-            <button @click="joinGameRoom">Commit join</button>
-        </div>
-    </div>
-    <div v-else>
-        No rooms available
-    </div>
-    <button @click="roomCreateInited = true" v-if="!roomCreateInited">Create room</button>
-    <div v-if="roomCreateInited">
-        <label style="display: block">Starting hand (in eurocent):</label>
-        <input type="number" v-model="ante" style="display:block" />
-        <button @click="commitCreateRoom">Create room</button>
-    </div>
+	<div class="lobby-page">
+		<LobbyView 
+			:rooms="getGameRooms"
+			:loading="loading"
+			@create-room="handleCreateRoom"
+			@join-room="handleJoinRoom"
+		/>
+	</div>
 </template>
 
 <script>
-	import { mapActions, mapGetters, mapMutations } from "vuex";
-    export default {
-        data() {
-            return {
-                roomCreateInited: false,
-                ante: 10,
-                tempGameId: null,
-                name: '',
-                balance: 0
-            }
-        },
-        methods: {
-			...mapActions(['viewRooms', 'createGame', 'joinGame', 'getState']),
+import { mapActions, mapGetters, mapMutations } from "vuex";
+import LobbyView from "../components/LobbyView.vue";
 
-			...mapMutations(['updateGameData']),
+export default {
+	name: 'Lobby',
+	components: {
+		LobbyView
+	},
+	data() {
+		return {
+			loading: true
+		};
+	},
+	async mounted() {
+		await this.loadRooms();
+		
+		// Refresh rooms every 3 seconds
+		this.roomRefreshInterval = setInterval(async () => {
+			await this.loadRooms();
+		}, 3000);
+	},
+	beforeUnmount() {
+		if (this.roomRefreshInterval) {
+			clearInterval(this.roomRefreshInterval);
+		}
+	},
+	methods: {
+		...mapActions(['viewRooms', 'createGame', 'joinGame', 'getState']),
+		...mapMutations(['updateGameData']),
 
-            async commitCreateRoom() {
-                if (this.ante < 5 || this.ante % 5 != 0)
-                    return;
+		async loadRooms() {
+			try {
+				this.loading = true;
+				this.updateGameData(null);
+				await this.viewRooms();
+			} catch (error) {
+				console.error('Failed to load rooms:', error);
+			} finally {
+				this.loading = false;
+			}
+		},
 
-                this.roomCreateInited = false;
+		async handleCreateRoom(ante) {
+			if (ante < 5 || ante % 5 !== 0) {
+				alert('Ante must be at least 5 and a multiple of 5');
+				return;
+			}
 
-                await this.createGame(this.ante);
+			try {
+				this.loading = true;
+				await this.createGame(ante);
+				await this.viewRooms();
+			} catch (error) {
+				console.error('Failed to create room:', error);
+				alert('Failed to create room. Please try again.');
+			} finally {
+				this.loading = false;
+			}
+		},
 
-                await this.viewRooms();
-            },
+		async handleJoinRoom({ roomId, playerName, playerBalance }) {
+			if (!playerName || !playerBalance || playerBalance < 0) {
+				alert('Please enter valid player details');
+				return;
+			}
 
-            async joinGameRoom() {
-                await this.joinGame({
-                    gameId: this.tempGameId,
-                    identity: {
-                        name: this.name,
-                        balance: this.balance
-                    }
-                });
+			try {
+				this.loading = true;
+				await this.joinGame({
+					gameId: roomId,
+					identity: {
+						name: playerName,
+						balance: playerBalance
+					}
+				});
 
 				await this.getState();
-
-                this.$router.push(`/game`);
-            }
-        },
-        async mounted() {
-            await this.viewRooms();
-
-            this.updateGameData(null);
-        },
-        computed: mapGetters(['getGameRooms'])
-    }
+				this.$router.push('/game');
+			} catch (error) {
+				console.error('Failed to join room:', error);
+				alert('Failed to join room. Please try again.');
+			} finally {
+				this.loading = false;
+			}
+		}
+	},
+	computed: {
+		...mapGetters(['getGameRooms'])
+	}
+};
 </script>
+
+<style scoped>
+.lobby-page {
+	min-height: 100vh;
+}
+</style>

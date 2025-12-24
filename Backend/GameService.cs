@@ -50,8 +50,10 @@ public class GameService
 		}
 
 		game.Status = "started";
+		game.LastRoundResult = null;
+		game.RoundNumber++;
 
-		game.Deck = DeckHelper.CreateShuffledDeck(gameId);
+		game.Deck = DeckHelper.CreateShuffledDeck($"{gameId}-{game.RoundNumber}-{DateTime.UtcNow.Ticks}");
 
 		game.DealHands();
 
@@ -83,7 +85,7 @@ public class GameService
 		if (currentPlayer.SecretId != playerId)
 			return false;
 
-		var currentPlayerBet = game.PlayerBets.GetValueOrDefault(playerId, 0);
+		var currentPlayerBet = game.PlayerBets.GetValueOrDefault(player.Id, 0);
 
 		switch (actionType.ToLower())
 		{
@@ -117,28 +119,25 @@ public class GameService
 				break;
 
 			case "bet":
-				if (!betAmount.HasValue || betAmount.Value <= game.CurrentBet || betAmount.Value > player.Balance)
+				if (!betAmount.HasValue || betAmount.Value <= game.CurrentBet || betAmount.Value > player.Balance + currentPlayerBet)
 					return false;
 
+				int additionalAmount = betAmount.Value - currentPlayerBet;
 				int previousBet = game.CurrentBet;
 				game.CurrentBet = betAmount.Value;
 
-				if (player.Balance <= betAmount.Value)
+				if (player.Balance <= additionalAmount)
 				{
-					if (game.PlayerBets.ContainsKey(playerId))
-						game.PlayerBets[player.Id] += player.Balance;
-					else
-						game.PlayerBets[player.Id] = player.Balance;
-
+					game.PlayerBets[player.Id] += player.Balance;
 					game.Pot += player.Balance;
 					player.Balance = 0;
 					player.IsAllIn = true;
 				}
 				else
 				{
-					player.Balance -= betAmount.Value;
+					player.Balance -= additionalAmount;
 					game.PlayerBets[player.Id] = betAmount.Value;
-					game.Pot += betAmount.Value;
+					game.Pot += additionalAmount;
 				}
 
 				if (betAmount.Value > previousBet)
@@ -204,11 +203,13 @@ public class GameService
 			CommunityCards = game.CommunityCards,
 			Pot = game.Pot,
 			CurrentBet = game.CurrentBet,
+			PlayerCurrentBet = game.PlayerBets.GetValueOrDefault(player.Id, 0),
 			CurrentTurn = game.Players[game.CurrentTurn].Id,
 			Player = player,
 			OtherPlayers = game.Players
 				.Where(p => p.Id != player.Id)
-				.Select(p => PublicPlayer.Create(p, game.Status, game.Players.Count, game.Players.Where(_=>_.IsFolded).Count()))
+				.Select(p => PublicPlayer.Create(p, game.Status, game.Players.Count, game.Players.Where(_=>_.IsFolded).Count())),
+			LastRoundResult = game.LastRoundResult
 		};
 	}
 

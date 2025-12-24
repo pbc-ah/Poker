@@ -1,0 +1,351 @@
+/* Responsive breakpoints */
+@media (max-width: 1400px) {
+  :root {
+    --text-5xl: 2.5rem;
+    --text-4xl: 2rem;
+    --text-3xl: 1.75rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --text-5xl: 2.25rem;
+    --text-4xl: 1.875rem;
+    --text-3xl: 1.5rem;
+    --text-2xl: 1.375rem;
+  }
+
+  body {
+    font-size: 15px;
+  }
+
+  .poker-table-container {
+    padding: var(--space-4);
+  }
+
+  .table-felt {
+    padding: var(--space-8);
+    min-height: 500px;
+  }
+
+  .playing-card {
+    width: 70px;
+    height: 98px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --text-5xl: 2rem;
+    --text-4xl: 1.75rem;
+    --text-3xl: 1.375rem;
+    --text-2xl: 1.25rem;
+    --text-xl: 1.125rem;
+  }
+
+  body {
+    font-size: 14px;
+  }
+
+  /* Stack elements vertically on mobile */
+  .flex-mobile-col {
+    flex-direction: column !important;
+  }
+
+  /* Full width buttons on mobile */
+  .btn-mobile-full {
+    width: 100% !important;
+  }
+
+  /* Hide on mobile */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Reduce spacing on mobile */
+  .lobby-container,
+  .game-container {
+    padding: var(--space-4);
+  }
+
+  /* Make poker table more compact */
+  .table-felt {
+    border-radius: var(--radius-3xl);
+    min-height: 400px;
+    padding: var(--space-4);
+  }
+
+  .community-cards {
+    gap: var(--space-2);
+  }
+
+  .playing-card {
+    width: 50px;
+    height: 70px;
+  }
+
+  .playing-card.mini {
+    width: 40px;
+    height: 56px;
+  }
+
+  /* Adjust player seats */
+  .player-info-card {
+    min-width: 140px;
+    padding: var(--space-3);
+  }
+
+  .avatar-circle {
+    width: 50px;
+    height: 50px;
+    font-size: var(--text-lg);
+  }
+
+  .player-name {
+    font-size: var(--text-sm);
+  }
+
+  .player-balance {
+    font-size: var(--text-base);
+  }
+
+  /* Action panel adjustments */
+  .action-panel {
+    padding: var(--space-4);
+  }
+
+  .action-buttons {
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    min-width: calc(50% - var(--space-2));
+    padding: var(--space-3);
+  }
+
+  .btn-icon {
+    font-size: var(--text-2xl);
+  }
+
+  .btn-text {
+    font-size: var(--text-xs);
+  }
+
+  /* Pot display adjustments */
+  .pot-amount {
+    font-size: var(--text-2xl);
+  }
+
+  .chips-stack {
+    width: 50px;
+    height: 25px;
+  }
+
+  .chip {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Modal adjustments */
+  .modal-overlay {
+    padding: var(--space-4);
+  }
+
+  .modal-content {
+    max-width: 100%;
+  }
+
+  /* Rooms grid */
+  .rooms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Forms */
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --text-5xl: 1.75rem;
+    --text-4xl: 1.5rem;
+    --text-3xl: 1.25rem;
+    --text-2xl: 1.125rem;
+  }
+
+  body {
+    font-size: 13px;
+  }
+
+  /* Extra compact poker table */
+  .table-felt {
+    min-height: 350px;
+  }
+
+  .playing-card {
+    width: 40px;
+    height: 56px;
+  }
+
+  .community-cards {
+    min-height: 80px;
+  }
+
+  /* Smaller pot display */
+  .pot-amount {
+    font-size: var(--text-xl);
+  }
+
+  /* Compact action buttons */
+  .action-btn {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  /* Hide long text on very small screens */
+  .hide-xs {
+    display: none !important;
+  }
+
+  /* Smaller player cards */
+  .player-info-card {
+    min-width: 120px;
+    padding: var(--space-2);
+  }
+
+  .avatar-circle {
+    width: 40px;
+    height: 40px;
+    font-size: var(--text-base);
+  }
+}
+
+/* Landscape orientation adjustments for mobile */
+@media (max-width: 1024px) and (orientation: landscape) {
+  .table-felt {
+    min-height: 400px;
+  }
+
+  .game-container {
+    padding-bottom: 180px;
+  }
+
+  .action-panel {
+    padding: var(--space-3);
+  }
+
+  .action-buttons {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .action-btn {
+    min-width: 100px;
+    flex-shrink: 0;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets */
+  button, .btn, input, select {
+    min-height: 44px;
+  }
+
+  /* Remove hover effects on touch devices */
+  .card:hover,
+  .room-card:hover,
+  .playing-card:hover {
+    transform: none;
+  }
+
+  /* Simplify animations for performance */
+  * {
+    animation-duration: 0.2s !important;
+  }
+}
+
+/* High DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Sharper rendering */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Higher quality shadows */
+  .playing-card,
+  .card,
+  .modal-content {
+    box-shadow: var(--shadow-xl);
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark mode support (in addition to default dark theme) */
+@media (prefers-color-scheme: light) {
+  /* User explicitly prefers light mode - respect it */
+  :root {
+    --color-dark: #f8f9fa;
+    --color-darker: #e9ecef;
+  }
+
+  body {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+    color: var(--color-gray-900);
+  }
+
+  .card,
+  .room-card,
+  .modal-content {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  label,
+  .player-name,
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--color-gray-900);
+  }
+
+  input, textarea, select {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--color-gray-900);
+    border-color: var(--color-gray-400);
+  }
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+
+  .action-panel,
+  .exit-btn,
+  button,
+  .btn {
+    display: none !important;
+  }
+
+  .table-felt {
+    box-shadow: none;
+    border: 2px solid black;
+  }
+}

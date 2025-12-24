@@ -16,6 +16,25 @@ public static class PokerHandEvaluator
         return Combinations(cards, 5).Max(ScoreHand);
     }
 
+    public static string GetHandName(int score)
+    {
+        var handRank = score >> 20;
+        
+        return handRank switch
+        {
+            9 => "Royal Flush",
+            8 => "Straight Flush",
+            7 => "Four of a Kind",
+            6 => "Full House",
+            5 => "Flush",
+            4 => "Straight",
+            3 => "Three of a Kind",
+            2 => "Two Pair",
+            1 => "One Pair",
+            _ => "High Card"
+        };
+    }
+
     private static int ScoreHand(List<string> hand)
     {
         var suits = hand.Select(c => c[0]).ToList();

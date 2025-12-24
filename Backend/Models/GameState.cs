@@ -7,7 +7,9 @@ public class GameState
     public List<string> CommunityCards { get; set; }
     public int Pot { get; set; }
     public int CurrentBet { get; set; }
+    public int PlayerCurrentBet { get; set; }
     public Player Player { get; set; }
     public IEnumerable<PublicPlayer> OtherPlayers { get; set; }
-    public string CurrentTurn { get; internal set; }
+    public string CurrentTurn { get; set; }
+    public RoundResult LastRoundResult { get; set; }
 }

@@ -20,5 +20,7 @@ public class Game(int anteAmount)
     public DateTime InsertionDate = DateTime.Now;
     internal bool IsWaiting => Status == "waiting";
 	public HashSet<string> PlayersActed = [];
+	public RoundResult LastRoundResult { get; set; }
+	public int RoundNumber { get; set; } = 0;
 }
 

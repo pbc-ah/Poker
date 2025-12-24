@@ -37,8 +37,6 @@ public static class GameExtensions
 
 		var nextTurn = (game.CurrentTurn + 1) % game.Players.Count;
 
-		var startTurn = game.CurrentTurn;
-
 		for (var i = 0; i < game.Players.Count; i++)
 		{
 			var player = game.Players[nextTurn];
@@ -77,21 +75,19 @@ public static class GameExtensions
 		if (eligible.Count == 0)
 			return true;
 
-		var maxBet = eligible
-			.Select(p => game.PlayerBets.GetValueOrDefault(p.Id, 0))
-			.Max();
+		// Check if all eligible players have acted
+		if (!eligible.All(p => game.PlayersActed.Contains(p.Id)))
+			return false;
 
-		return eligible.All(p =>
-			game.PlayersActed.Contains(p.Id) &&
-			game.PlayerBets.GetValueOrDefault(p.Id, 0) == maxBet
-		);
+		// Check if all players have matched the current bet
+		var maxBet = game.CurrentBet;
+		return eligible.All(p => game.PlayerBets.GetValueOrDefault(p.Id, 0) >= maxBet);
 	}
 
 	public static void AdvanceBettingRound(this Game game)
 	{
 		game.PlayersActed.Clear();
 		game.PlayerBets.Clear();
-
 		game.CurrentBet = 0;
 
 		if (game.BettingRound < 3)
@@ -119,29 +115,87 @@ public static class GameExtensions
 
 	public static void ResolveWinner(this Game game)
 	{
+		var originalPot = game.Pot;
+		var roundResult = new RoundResult
+		{
+			TotalPot = originalPot,
+			Winners = []
+		};
+
 		try
 		{
 			game.Status = "waiting";
 
 			var eligiblePlayers = game.Players.Where(p => !p.IsFolded).ToList();
 
-			var totalBets = game.PlayerBets.Values.Sum();
-
-			if (game.SidePots.Count == 0 && eligiblePlayers.Count > 0)
+			// Complete the board if not all cards are dealt (happens when everyone folds)
+			while (game.CommunityCards.Count < 5)
 			{
-				var winners = eligiblePlayers
-					.OrderByDescending(p => PokerHandEvaluator.Evaluate([.. p.Hand, .. game.CommunityCards]))
+				game.CommunityCards.AddRange(game.DrawCards(1));
+			}
+
+			if (eligiblePlayers.Count == 0)
+			{
+				// Everyone folded - shouldn't happen but handle it
+				game.LastRoundResult = roundResult;
+				return;
+			}
+
+			if (eligiblePlayers.Count == 1)
+			{
+				// Only one player left - they win by fold
+				var winner = eligiblePlayers.First();
+				winner.Balance += game.Pot;
+
+				roundResult.WinningHandName = "Win by Fold";
+				roundResult.Winners.Add(new WinnerInfo
+				{
+					PlayerId = winner.Id,
+					PlayerName = winner.Name,
+					AmountWon = game.Pot,
+					HandScore = 0,
+					HandName = "Win by Fold"
+				});
+
+				game.LastRoundResult = roundResult;
+				return;
+			}
+
+			if (game.SidePots.Count == 0)
+			{
+				var playersWithScores = eligiblePlayers
+					.Select(p => new
+					{
+						Player = p,
+						Score = PokerHandEvaluator.Evaluate([.. p.Hand, .. game.CommunityCards])
+					})
+					.OrderByDescending(x => x.Score)
 					.ToList();
 
-				var bestScore = PokerHandEvaluator.Evaluate([.. winners.First().Hand, .. game.CommunityCards]);
-				var finalWinners = winners
-					.Where(w => PokerHandEvaluator.Evaluate(w.Hand.Concat(game.CommunityCards).ToList()) == bestScore)
+				var bestScore = playersWithScores.First().Score;
+				var finalWinners = playersWithScores
+					.Where(x => x.Score == bestScore)
 					.ToList();
 
 				int share = game.Pot / finalWinners.Count;
-				foreach (var winner in finalWinners)
-					winner.Balance += share;
+				
+				var handName = PokerHandEvaluator.GetHandName(bestScore);
+				roundResult.WinningHandName = handName;
 
+				foreach (var winner in finalWinners)
+				{
+					winner.Player.Balance += share;
+					roundResult.Winners.Add(new WinnerInfo
+					{
+						PlayerId = winner.Player.Id,
+						PlayerName = winner.Player.Name,
+						AmountWon = share,
+						HandScore = winner.Score,
+						HandName = handName
+					});
+				}
+
+				game.LastRoundResult = roundResult;
 				return;
 			}
 
@@ -156,20 +210,75 @@ public static class GameExtensions
 				if (contenders.Count == 0)
 					continue;
 
-				var sorted = contenders
-					.OrderByDescending(p => PokerHandEvaluator.Evaluate([.. p.Hand, .. game.CommunityCards]))
+				if (contenders.Count == 1)
+				{
+					// Only one player eligible for this side pot
+					var winner = contenders.First();
+					winner.Balance += pot.Amount;
+
+					var existingWinner = roundResult.Winners.FirstOrDefault(w => w.PlayerId == winner.Id);
+					if (existingWinner != null)
+					{
+						existingWinner.AmountWon += pot.Amount;
+					}
+					else
+					{
+						roundResult.Winners.Add(new WinnerInfo
+						{
+							PlayerId = winner.Id,
+							PlayerName = winner.Name,
+							AmountWon = pot.Amount,
+							HandScore = 0,
+							HandName = "Win by Fold"
+						});
+					}
+					continue;
+				}
+
+				var playersWithScores = contenders
+					.Select(p => new
+					{
+						Player = p,
+						Score = PokerHandEvaluator.Evaluate([.. p.Hand, .. game.CommunityCards])
+					})
+					.OrderByDescending(x => x.Score)
 					.ToList();
 
-				var bestScore = PokerHandEvaluator.Evaluate([.. sorted.First().Hand, .. game.CommunityCards]);
-
-				var finalWinners = sorted
-					.Where(w => PokerHandEvaluator.Evaluate([.. w.Hand, .. game.CommunityCards]) == bestScore)
+				var bestScore = playersWithScores.First().Score;
+				var finalWinners = playersWithScores
+					.Where(x => x.Score == bestScore)
 					.ToList();
 
 				var share = pot.Amount / finalWinners.Count;
+				var handName = PokerHandEvaluator.GetHandName(bestScore);
+
+				if (string.IsNullOrEmpty(roundResult.WinningHandName))
+					roundResult.WinningHandName = handName;
+
 				foreach (var winner in finalWinners)
-					winner.Balance += share;
+				{
+					winner.Player.Balance += share;
+					
+					var existingWinner = roundResult.Winners.FirstOrDefault(w => w.PlayerId == winner.Player.Id);
+					if (existingWinner != null)
+					{
+						existingWinner.AmountWon += share;
+					}
+					else
+					{
+						roundResult.Winners.Add(new WinnerInfo
+						{
+							PlayerId = winner.Player.Id,
+							PlayerName = winner.Player.Name,
+							AmountWon = share,
+							HandScore = winner.Score,
+							HandName = handName
+						});
+					}
+				}
 			}
+
+			game.LastRoundResult = roundResult;
 		}
 		finally
 		{
