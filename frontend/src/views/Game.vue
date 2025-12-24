@@ -1,5 +1,7 @@
 <template>
 	<div class="game-page">
+		<ConnectionStatus :isConnected="isConnected" />
+		
 		<div class="game-container" v-if="getGameRoom">
 			<!-- Waiting Screen -->
 			<template v-if="getGameRoom.status === 'waiting'">
@@ -162,17 +164,20 @@
 import { mapActions, mapGetters } from "vuex";
 import PokerTable from "../components/PokerTable.vue";
 import ActionPanel from "../components/ActionPanel.vue";
+import ConnectionStatus from "../components/ConnectionStatus.vue";
+import signalRService from "../services/signalr";
 
 export default {
 	name: 'Game',
 	components: {
 		PokerTable,
-		ActionPanel
+		ActionPanel,
+		ConnectionStatus
 	},
 	data() {
 		return {
 			showingResults: false,
-			gameStateInterval: null
+			isConnected: false
 		};
 	},
 	computed: {
@@ -197,18 +202,56 @@ export default {
 			return this.getGameRoom?.lastRoundResult;
 		}
 	},
-	mounted() {
-		this.gameStateInterval = setInterval(async () => {
-			await this.getState();
-		}, 750);
+	async mounted() {
+		// Set up SignalR callbacks
+		signalRService.onGameStateUpdate((gameState) => {
+			this.updateGameData(gameState);
+		});
+
+		signalRService.onConnectionChange((connected) => {
+			this.isConnected = connected;
+			if (!connected) {
+				console.log('Disconnected from game server, reconnecting...');
+			}
+		});
+
+		// Join the game room with player ID
+		try {
+			const playerId = this.$store.state.player?.secretId;
+			const gameId = this.$store.state.gameId;
+			
+			if (playerId && gameId) {
+				await signalRService.joinGameRoom(gameId, playerId);
+				this.isConnected = true;
+				// Get initial state
+				await this.getState();
+			} else {
+				console.error('Missing player or game ID');
+				this.$router.push('/');
+			}
+		} catch (error) {
+			console.error('Failed to join game room:', error);
+		}
 	},
-	beforeUnmount() {
-		if (this.gameStateInterval) {
-			clearInterval(this.gameStateInterval);
+	async beforeUnmount() {
+		// Leave the game room
+		try {
+			const playerId = this.$store.state.player?.secretId;
+			const gameId = this.$store.state.gameId;
+			
+			if (playerId && gameId) {
+				await signalRService.leaveGameRoom(gameId, playerId);
+			}
+		} catch (error) {
+			console.error('Failed to leave game room:', error);
 		}
 	},
 	methods: {
 		...mapActions(['getState', 'playerIsReady', 'commitAction']),
+		
+		updateGameData(gameState) {
+			this.$store.commit('updateGameData', gameState);
+		},
 		
 		formatChips(amount) {
 			return `${amount}¢`;

@@ -13,13 +13,13 @@ public class GameController(GameService gameService) : ControllerBase
 		=> Ok(gameService.GetRooms());
 
 	[HttpGet("create/{ante}")]
-	public IActionResult Create(int ante)
-		=> Ok(gameService.CreateGame(ante));
+	public async Task<IActionResult> Create(int ante)
+		=> Ok(await gameService.CreateGame(ante));
 
 	[HttpPost("{gameId}/join")]
-	public IActionResult Join(string gameId, [FromBody] Player player)
+	public async Task<IActionResult> Join(string gameId, [FromBody] Player player)
 	{
-		var success = gameService.JoinGame(gameId, player);
+		var success = await gameService.JoinGame(gameId, player);
 
 		if (!success)
 			return BadRequest("Cannot join game.");

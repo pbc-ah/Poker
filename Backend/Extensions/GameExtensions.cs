@@ -288,6 +288,7 @@ public static class GameExtensions
 			game.BettingRound = 1;
 			game.SidePots.Clear();
 			game.PlayerBets.Clear();
+			game.PlayersActed.Clear();
 			game.Players.ForEach(player =>
 			{
 				player.IsReady = player.Balance == 0;

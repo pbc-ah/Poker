@@ -1,26 +1,38 @@
 using Backend.Extensions;
+using Microsoft.AspNetCore.SignalR;
+using Backend.Hubs;
 
 namespace Backend;
 
 public class GameService
 {
+	private readonly IHubContext<GameHub> _hubContext;
+	
 	public IEnumerable<Game> GetRooms() => _games.Select(_ => _.Value).Where(game => (DateTime.Now - game.InsertionDate).TotalHours < 1);
 
 	private readonly Dictionary<string, Game> _games = [];
 
-	public string CreateGame(int ante)
+	public GameService(IHubContext<GameHub> hubContext)
+	{
+		_hubContext = hubContext;
+	}
+
+	public async Task<string> CreateGame(int ante)
 	{
 		Game game = new(ante);
 		_games[game.Id] = game;
+		await BroadcastLobbyUpdate();
 		return game.Id;
 	}
 
-	public bool JoinGame(string gameId, Player player)
+	public async Task<bool> JoinGame(string gameId, Player player)
 	{
 		if (!_games.TryGetValue(gameId, out var game) || !game.IsWaiting)
 			return false;
 
 		game.Players.Add(player);
+		await BroadcastLobbyUpdate();
+		await BroadcastGameUpdate(gameId);
 
 		return true;
 	}
@@ -33,6 +45,7 @@ public class GameService
 		game.Players.RemoveAll(_ => _.Balance == 0);
 
 		game.CommunityCards.Clear();
+		game.PlayersActed.Clear();
 
 		game.Players.ForEach(player => player.IsFolded = false);
 
@@ -58,6 +71,8 @@ public class GameService
 		game.DealHands();
 
 		game.CommunityCards.AddRange(game.DrawCards(3));
+
+		_ = BroadcastGameUpdate(gameId);
 
 		return true;
 	}
@@ -104,7 +119,7 @@ public class GameService
 				int callAmount = game.CurrentBet - currentPlayerBet;
 				if (player.Balance <= callAmount)
 				{
-					game.PlayerBets[player.Id] += player.Balance;
+					game.PlayerBets[player.Id] = game.PlayerBets.GetValueOrDefault(player.Id, 0) + player.Balance;
 					game.Pot += player.Balance;
 					player.Balance = 0;
 					player.IsAllIn = true;
@@ -128,7 +143,7 @@ public class GameService
 
 				if (player.Balance <= additionalAmount)
 				{
-					game.PlayerBets[player.Id] += player.Balance;
+					game.PlayerBets[player.Id] = game.PlayerBets.GetValueOrDefault(player.Id, 0) + player.Balance;
 					game.Pot += player.Balance;
 					player.Balance = 0;
 					player.IsAllIn = true;
@@ -153,18 +168,21 @@ public class GameService
 		if (game.Players.Count(p => !p.IsFolded) == 1)
 		{
 			game.ResolveWinner();
+			_ = BroadcastGameUpdate(gameId);
 			return true;
 		}
 
 		if (!game.AllPlayersActed())
 		{
 			game.AdvanceTurn();
+			_ = BroadcastGameUpdate(gameId);
 			return true;
 		}
 
 		if (game.BettingRound >= 3 || game.Players.Count(p => !p.IsFolded) <= 1)
 		{
 			game.ResolveWinner();
+			_ = BroadcastGameUpdate(gameId);
 			return true;
 		}
 
@@ -179,10 +197,9 @@ public class GameService
 		else
 			game.ResolveWinner();
 
+		_ = BroadcastGameUpdate(gameId);
 		return true;
 	}
-
-
 
 	public GameState GetPlayerView(string gameId, string playerId)
 	{
@@ -219,6 +236,35 @@ public class GameService
 
 		game.Players.Find(_ => _.SecretId == playerId).IsReady = true;
 
-		return game.Players.All(_ => _.IsReady) && StartGame(gameId);
+		var allReady = game.Players.All(_ => _.IsReady) && StartGame(gameId);
+		
+		if (!allReady)
+			_ = BroadcastGameUpdate(gameId);
+			
+		return allReady;
+	}
+
+	private async Task BroadcastGameUpdate(string gameId)
+	{
+		var game = GetGame(gameId);
+		if (game == null) return;
+
+		// Send personalized state to each player individually
+		foreach (var player in game.Players)
+		{
+			var state = GetPlayerView(gameId, player.SecretId);
+			var connectionId = GameHub.GetConnectionId(player.SecretId);
+			
+			if (!string.IsNullOrEmpty(connectionId))
+			{
+				await _hubContext.Clients.Client(connectionId).SendAsync("GameStateUpdate", state);
+			}
+		}
+	}
+
+	private async Task BroadcastLobbyUpdate()
+	{
+		var rooms = GetRooms();
+		await _hubContext.Clients.Group("lobby").SendAsync("LobbyUpdate", rooms);
 	}
 }

@@ -12,6 +12,7 @@
 <script>
 import { mapActions, mapGetters, mapMutations } from "vuex";
 import LobbyView from "../components/LobbyView.vue";
+import signalRService from "../services/signalr";
 
 export default {
 	name: 'Lobby',
@@ -20,20 +21,36 @@ export default {
 	},
 	data() {
 		return {
-			loading: true
+			loading: true,
+			isConnected: false
 		};
 	},
 	async mounted() {
+		// Set up SignalR callbacks
+		signalRService.onLobbyUpdate((rooms) => {
+			this.$store.commit('updateRooms', rooms);
+		});
+
+		signalRService.onConnectionChange((connected) => {
+			this.isConnected = connected;
+		});
+
+		// Join the lobby room
+		try {
+			await signalRService.joinLobby();
+			this.isConnected = true;
+		} catch (error) {
+			console.error('Failed to join lobby:', error);
+		}
+
 		await this.loadRooms();
-		
-		// Refresh rooms every 3 seconds
-		this.roomRefreshInterval = setInterval(async () => {
-			await this.loadRooms();
-		}, 3000);
 	},
-	beforeUnmount() {
-		if (this.roomRefreshInterval) {
-			clearInterval(this.roomRefreshInterval);
+	async beforeUnmount() {
+		// Leave the lobby room
+		try {
+			await signalRService.leaveLobby();
+		} catch (error) {
+			console.error('Failed to leave lobby:', error);
 		}
 	},
 	methods: {
@@ -61,7 +78,9 @@ export default {
 			try {
 				this.loading = true;
 				await this.createGame(ante);
-				await this.viewRooms();
+				// Give SignalR a moment to broadcast, then fallback to manual refresh
+				await new Promise(resolve => setTimeout(resolve, 300));
+				await this.loadRooms();
 			} catch (error) {
 				console.error('Failed to create room:', error);
 				alert('Failed to create room. Please try again.');
