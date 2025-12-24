@@ -6,7 +6,7 @@ import axios from 'axios'
 import signalRService from './services/signalr'
 
 axios.defaults.baseURL = "http://localhost:5267/";
-//axios.defaults.baseURL = "http://192.168.5.58/api	baruuuuuuuuuuu		/";
+//axios.defaults.baseURL = "http://192.168.5.58/api/";
 
 const app = createApp(App);
 app.use(router)
